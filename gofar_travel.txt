@@ -7,3 +7,17 @@
                 'C:\ORACLEXE\APP\ORACLE\ORADATA\XE\GT3.DBF' SIZE 341M;
 	2. CREATE TABLESPACE test_purposes DATAFILE 'C:\ORACLEXE\APP\ORACLE\ORADATA\XE\test_purposes.DBF' SIZE 500M;
 	3. CREATE UNDO TABLESPACE UNDOTBS2 DATAFILE 'C:\ORACLEXE\APP\ORACLE\ORADATA\XE\UNDOTBS2_01.DBF' SIZE 5M;
+
+(3). Set the undo tablespace to be used in the system.
+	ALTER SYSTEM SET UNDO_TABLESPACE = UNDOTBS2;
+
+(4). Create a DBA user and assign it to the tablespace called "gofar_travel", this user has unlimited space
+     on the tablespace.
+	CREATE USER DAVG1
+	IDENTIFIED BY DAVG1
+	DEFAULT TABLESPACE gofar_travel
+	QUOTA UNLIMITED ON gofar_travel;
+
+(5). Assign the dba role and permissions to connect to the user just created
+	GRANT ALL PRIVILEGES TO DAVG1;
+	GRANT CREATE SESSION TO DAVG1;
