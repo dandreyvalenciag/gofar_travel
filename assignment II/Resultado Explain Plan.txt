@@ -1,0 +1,42 @@
+************RESULTADO EXPLAIN PLAN:
+
+Plan hash value: 3357279366
+ 
+--------------------------------------------------------------------------------------------------------
+| Id  | Operation                            | Name            | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                     |                 |    21 |  5145 |    28  (18)| 00:00:01 |
+|   1 |  SORT ORDER BY                       |                 |    21 |  5145 |    28  (18)| 00:00:01 |
+|*  2 |   HASH JOIN OUTER                    |                 |    21 |  5145 |    27  (15)| 00:00:01 |
+|   3 |    VIEW                              |                 |    21 |  4851 |    24  (17)| 00:00:01 |
+|*  4 |     HASH JOIN OUTER                  |                 |    21 |  2100 |    24  (17)| 00:00:01 |
+|*  5 |      HASH JOIN                       |                 |    21 |  1911 |    20  (15)| 00:00:01 |
+|*  6 |       HASH JOIN                      |                 |    21 |  1659 |    17  (18)| 00:00:01 |
+|*  7 |        HASH JOIN                     |                 |    21 |  1281 |    13  (16)| 00:00:01 |
+|*  8 |         HASH JOIN                    |                 |    21 |  1029 |    10  (20)| 00:00:01 |
+|   9 |          MERGE JOIN                  |                 |    21 |   735 |     6  (17)| 00:00:01 |
+|  10 |           TABLE ACCESS BY INDEX ROWID| VENDEDORES      |    11 |   198 |     2   (0)| 00:00:01 |
+|  11 |            INDEX FULL SCAN           | SYS_C007139     |    11 |       |     1   (0)| 00:00:01 |
+|* 12 |           SORT JOIN                  |                 |    21 |   357 |     4  (25)| 00:00:01 |
+|  13 |            TABLE ACCESS FULL         | FACTURAS        |    21 |   357 |     3   (0)| 00:00:01 |
+|  14 |          TABLE ACCESS FULL           | VEHICULOS       |    50 |   700 |     3   (0)| 00:00:01 |
+|  15 |         TABLE ACCESS FULL            | MODELOS         |     4 |    48 |     3   (0)| 00:00:01 |
+|  16 |        TABLE ACCESS FULL             | CLIENTES        |    20 |   360 |     3   (0)| 00:00:01 |
+|  17 |       TABLE ACCESS FULL              | FABRICANTES     |     5 |    60 |     3   (0)| 00:00:01 |
+|  18 |      TABLE ACCESS FULL               | OPCIONES_VENTAS |     4 |    36 |     3   (0)| 00:00:01 |
+|  19 |    TABLE ACCESS FULL                 | OPCIONES        |     5 |    70 |     3   (0)| 00:00:01 |
+--------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access("OPCIONES_VENTAS"."OPCION_ID"="OPCIONES"."ID_OPCION"(+))
+       filter("FACTURAS"."ID_FACTURA"=CASE  WHEN ("OPCIONES"."ID_OPCION"(+) IS NOT NULL) THEN 
+              "OPCIONES_VENTAS"."FACTURA_ID" ELSE "OPCIONES_VENTAS"."FACTURA_ID" END )
+   4 - access("FACTURAS"."ID_FACTURA"="OPCIONES_VENTAS"."FACTURA_ID"(+))
+   5 - access("VEHICULOS"."FABRICANTE_ID"="FABRICANTES"."ID_FABRICANTE")
+   6 - access("FACTURAS"."CLIENTE_ID"="CLIENTES"."ID_CLIENTE")
+   7 - access("VEHICULOS"."MODELO_ID"="MODELOS"."ID_MODELO")
+   8 - access("FACTURAS"."VEHICULO_ID"="VEHICULOS"."VIN")
+  12 - access("FACTURAS"."VENDEDOR_ID"="VENDEDORES"."ID_VENDEDOR")
+       filter("FACTURAS"."VENDEDOR_ID"="VENDEDORES"."ID_VENDEDOR")
