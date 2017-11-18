@@ -1,0 +1,40 @@
+¿Por qué UBER migro de Postgres y MySql?
+
+Inicialmente Uber utilizaba la herramienta de Postgres para el almacenamiento de la información, pero a medida que las funcionalidades comenzaron a crecer 
+encontraron varios inconvenientes con Postgres y optaron por cambiar a MySql.
+Hay varias similitudes entre Postgres y MySql, una de ellas es que ambos son proyectos de base de datos de código abierto. 
+En cuanto a las diferencias ambos proyectos tienen perspectivas técnicas radicalmente diferentes, y cada una está informada por un conjunto 
+completamente diferente de preocupaciones.
+
+Postgres se ha enfocado tradicionalmente en la fiabilidad, integridad de datos y características integradas enfocadas al desarrollador. 
+Tiene un planificador de consultas extremadamente sofisticado, que es capaz de unir cantidades relativamente grandes de tablas eficientemente.
+MySQL, por otra parte, se ha enfocado tradicionalmente en aplicaciones web de mayor lectura, usualmente escritas en PHP, donde la principal preocupación 
+es la optimización de consultas sencillas.
+Si bien ambos motores de base de datos tienen sus ventajas y han mejorado los detalles técnicos y los desarrolladores son los principales factores a tener
+en cuenta al momento de elegir la herramienta adecuada para trabajar.
+
+En cuanto al cambio que realizo UBER de Postgres y MySql como lo explican en el artículo, se encuentra que las principales razones para esta migración son: 
+operaciones de escritura lentas, operaciones en los índices consumen demasiados recursos, corrupción de los datos y problemas con los updates.
+En las operaciones lentas y índices caros el problema es debido a que Postgres tiene que reconstruir los índices debido al ctid interno que le asigna, 
+y en combinación con replicación tiene que hacer demasiadas escrituras en disco, lo cual empieza a convertirse en problema si se tienen varios datacenters repartidos, ya que no les da el ancho de banda para enviar tanta información. 
+La replicación en MySql por otro lado, es sumamente simple y no requiere de tanta información. 
+En corrupción de los datos encontraron que durante operaciones para aumentar el tamaño de la base de datos se encontraron registros que fueron marcados 
+de manera incorrecta.
+El otro punto en contra eran los updates, eran complicados de hacer con Postgres, y estaban corriendo una versión bastante vieja (9.2) ya que solamente 
+realizaron el update de 9.1 a 9.2, y cuando salió el update 9.3 UBER eran tan grande que simplemente no tenían la capacidad para hacerlo.
+
+Una de las ventajas de MySql y por la cual la escogieron es que mientras Postgres asigna los ctid internos a los índices MySql tiene un índice secundario 
+que asocia claves de índices secundarios con claves principales donde la búsqueda se realiza más rápidamente.
+
+En la replicación MySql admite varios tipos de replicación que son: la replicación basada en instrucciones que replica las declaraciones lógicas de SQL, 
+la replicación basada en filas que replica registros de filas alteradas y la replicación mixta que mezcla los dos métodos anteriores.
+Otro de los problemas encontrados fue en el almacenamiento de memoria cache ya que el acceso a los datos a través de la memoria cache consume muchos más recursos 
+y es menos eficiente que el método utilizado por MySql.
+Por último, el diseño de proceso de conexión de Postgres es más costoso que el diseño de hilo por conexión de MySql ya que ocupa más memoria bifurcar un nuevo 
+proceso que crear un hilo de conexión.
+
+En conclusión, el uso de Postgres durante los primeros años de UBER fue satisfactorio pero debido al gran crecimiento de la plataforma y sus funcionalidades 
+encontraron problemas que afectarían este crecimiento y hallaron que con MySql no detendrían este crecimiento y podrían generar avances más significativos.
+
+
+
