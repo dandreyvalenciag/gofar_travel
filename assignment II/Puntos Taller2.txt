@@ -1,0 +1,126 @@
+--------------------------------SOLUCION TALLER---------------------------------
+
+----------------------PUNTO 1 TALLER 2
+ALTER TABLE VEHICULOS
+ADD (FECHA_INGRESO DATE, FECHA_SALIDA DATE,
+CONSTRAINT CK_VEHICULOS_TYPE CHECK (ESTADO IN ('NUEVO', 'INTERCAMBIO', 'VENDIDO')));
+
+--Comprobación 1er punto
+INSERT INTO VEHICULOS VALUES (20050,'Carrapicho',401,'2016',30001,46816.76,'COMERCIO','01/07/2015','19/09/2017');
+
+
+----------------------PUNTO 2 TALLER 2
+ALTER TABLE OPCIONES
+ADD UNIDADES_DISPONIBLES NUMBER(4) DEFAULT 30;
+
+--Actualizar nuevamente al default = 30 para todas las opciones.
+UPDATE OPCIONES SET UNIDADES_DISPONIBLES = DEFAULT;
+
+
+----------------------PUNTO 3 TALLER 2
+CREATE OR REPLACE VIEW PRODUCTOS_BAJO_STOCK AS
+    SELECT OPCIONES.ID_OPCION, OPCIONES.DESCRIPCION, FABRICANTES.ID_FABRICANTE, FABRICANTES.NOMBRE_FABRICANTE
+    FROM OPCIONES
+    INNER JOIN FABRICANTES ON OPCIONES.FABRICANTE_ID = FABRICANTES.ID_FABRICANTE
+    WHERE OPCIONES.UNIDADES_DISPONIBLES < 5;
+
+--Comprobación 3er punto
+UPDATE OPCIONES SET UNIDADES_DISPONIBLES = 3 WHERE ID_OPCION = 804;
+UPDATE OPCIONES SET UNIDADES_DISPONIBLES = 4 WHERE ID_OPCION = 802;
+SELECT * FROM PRODUCTOS_BAJO_STOCK;
+
+    
+----------------------PUNTO 4 TALLER 2
+CREATE OR REPLACE TRIGGER DISMINUIR_STOCK AFTER INSERT ON OPCIONES_VENTAS
+FOR EACH ROW
+BEGIN
+    UPDATE OPCIONES SET UNIDADES_DISPONIBLES = UNIDADES_DISPONIBLES - 1 WHERE ID_OPCION = :NEW.OPCION_ID;
+END;
+
+--Comprobación 4to punto
+INSERT INTO OPCIONES_VENTAS VALUES (OPCIONES_VENTAS_SEQ.NEXTVAL,51019,802);
+INSERT INTO OPCIONES_VENTAS VALUES (OPCIONES_VENTAS_SEQ.NEXTVAL,51019,803);
+
+
+----------------------PUNTO 5 TALLER 2
+CREATE OR REPLACE PROCEDURE reorder_units IS
+BEGIN
+    UPDATE OPCIONES SET UNIDADES_DISPONIBLES = UNIDADES_DISPONIBLES + 20 
+    WHERE ID_OPCION IN (SELECT ID_OPCION FROM PRODUCTOS_BAJO_STOCK);
+END;
+
+--Comprobación 5to punto
+EXECUTE reorder_units;
+
+
+----------------------PUNTO 6 TALLER 2
+CREATE OR REPLACE VIEW FACTURA_OPCIONES AS
+    SELECT FACTURAS.ID_FACTURA, FACTURAS.VENDEDOR_ID, (VENDEDORES.NOMBRE || ' ' || VENDEDORES.APELLIDO) AS NOMBRE_VENDEDOR, 
+        FACTURAS.CLIENTE_ID, (CLIENTES.NOMBRE || ' ' || CLIENTES.APELLIDO) AS NOMBRE_CLIENTE,        
+        FACTURAS.VEHICULO_ID, MODELOS.NOMBRE_MODELO, FABRICANTES.NOMBRE_FABRICANTE, OPCIONES_VENTAS.OPCION_ID, OPCIONES.DESCRIPCION
+    FROM FACTURAS
+    INNER JOIN VENDEDORES ON FACTURAS.VENDEDOR_ID = VENDEDORES.ID_VENDEDOR
+    INNER JOIN CLIENTES ON FACTURAS.CLIENTE_ID = CLIENTES.ID_CLIENTE
+    INNER JOIN VEHICULOS ON FACTURAS.VEHICULO_ID = VEHICULOS.VIN
+        INNER JOIN MODELOS ON VEHICULOS.MODELO_ID = MODELOS.ID_MODELO AND FACTURAS.VEHICULO_ID = VEHICULOS.VIN
+        INNER JOIN FABRICANTES ON VEHICULOS.FABRICANTE_ID = FABRICANTES.ID_FABRICANTE AND FACTURAS.VEHICULO_ID = VEHICULOS.VIN
+    LEFT JOIN OPCIONES_VENTAS ON FACTURAS.ID_FACTURA = OPCIONES_VENTAS.FACTURA_ID
+        LEFT JOIN OPCIONES ON OPCIONES_VENTAS.OPCION_ID = OPCIONES.ID_OPCION AND OPCIONES_VENTAS.FACTURA_ID = FACTURAS.ID_FACTURA
+     ORDER BY FACTURAS.ID_FACTURA;
+     
+--Comprobación 6to punto
+SELECT * FROM FACTURA_OPCIONES;
+
+
+----------------------PUNTO 7 TALLER 2
+EXPLAIN PLAN
+     SET Statement_ID = 'TEST'
+     FOR
+     SELECT * FROM FACTURA_OPCIONES;
+     
+SELECT * FROM TABLE (DBMS_XPLAN.DISPLAY('PLAN_TABLE', 'TEST', 'TYPICAL ') );
+
+
+
+************RESULTADO EXPLAIN PLAN:
+
+Plan hash value: 3357279366
+ 
+--------------------------------------------------------------------------------------------------------
+| Id  | Operation                            | Name            | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                     |                 |    21 |  5145 |    28  (18)| 00:00:01 |
+|   1 |  SORT ORDER BY                       |                 |    21 |  5145 |    28  (18)| 00:00:01 |
+|*  2 |   HASH JOIN OUTER                    |                 |    21 |  5145 |    27  (15)| 00:00:01 |
+|   3 |    VIEW                              |                 |    21 |  4851 |    24  (17)| 00:00:01 |
+|*  4 |     HASH JOIN OUTER                  |                 |    21 |  2100 |    24  (17)| 00:00:01 |
+|*  5 |      HASH JOIN                       |                 |    21 |  1911 |    20  (15)| 00:00:01 |
+|*  6 |       HASH JOIN                      |                 |    21 |  1659 |    17  (18)| 00:00:01 |
+|*  7 |        HASH JOIN                     |                 |    21 |  1281 |    13  (16)| 00:00:01 |
+|*  8 |         HASH JOIN                    |                 |    21 |  1029 |    10  (20)| 00:00:01 |
+|   9 |          MERGE JOIN                  |                 |    21 |   735 |     6  (17)| 00:00:01 |
+|  10 |           TABLE ACCESS BY INDEX ROWID| VENDEDORES      |    11 |   198 |     2   (0)| 00:00:01 |
+|  11 |            INDEX FULL SCAN           | SYS_C007139     |    11 |       |     1   (0)| 00:00:01 |
+|* 12 |           SORT JOIN                  |                 |    21 |   357 |     4  (25)| 00:00:01 |
+|  13 |            TABLE ACCESS FULL         | FACTURAS        |    21 |   357 |     3   (0)| 00:00:01 |
+|  14 |          TABLE ACCESS FULL           | VEHICULOS       |    50 |   700 |     3   (0)| 00:00:01 |
+|  15 |         TABLE ACCESS FULL            | MODELOS         |     4 |    48 |     3   (0)| 00:00:01 |
+|  16 |        TABLE ACCESS FULL             | CLIENTES        |    20 |   360 |     3   (0)| 00:00:01 |
+|  17 |       TABLE ACCESS FULL              | FABRICANTES     |     5 |    60 |     3   (0)| 00:00:01 |
+|  18 |      TABLE ACCESS FULL               | OPCIONES_VENTAS |     4 |    36 |     3   (0)| 00:00:01 |
+|  19 |    TABLE ACCESS FULL                 | OPCIONES        |     5 |    70 |     3   (0)| 00:00:01 |
+--------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access("OPCIONES_VENTAS"."OPCION_ID"="OPCIONES"."ID_OPCION"(+))
+       filter("FACTURAS"."ID_FACTURA"=CASE  WHEN ("OPCIONES"."ID_OPCION"(+) IS NOT NULL) THEN 
+              "OPCIONES_VENTAS"."FACTURA_ID" ELSE "OPCIONES_VENTAS"."FACTURA_ID" END )
+   4 - access("FACTURAS"."ID_FACTURA"="OPCIONES_VENTAS"."FACTURA_ID"(+))
+   5 - access("VEHICULOS"."FABRICANTE_ID"="FABRICANTES"."ID_FABRICANTE")
+   6 - access("FACTURAS"."CLIENTE_ID"="CLIENTES"."ID_CLIENTE")
+   7 - access("VEHICULOS"."MODELO_ID"="MODELOS"."ID_MODELO")
+   8 - access("FACTURAS"."VEHICULO_ID"="VEHICULOS"."VIN")
+  12 - access("FACTURAS"."VENDEDOR_ID"="VENDEDORES"."ID_VENDEDOR")
+       filter("FACTURAS"."VENDEDOR_ID"="VENDEDORES"."ID_VENDEDOR")
